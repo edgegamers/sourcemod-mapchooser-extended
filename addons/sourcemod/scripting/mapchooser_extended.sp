@@ -35,18 +35,6 @@
 
 //#define DEBUG
 
-#if defined DEBUG
-#define assert(% 1) \
-    if (!(% 1))     \
-        ThrowError("Debug Assertion Failed");
-#define assert_msg(% 1, % 2) \
-    if (!(% 1))              \
-        ThrowError(% 2);
-#else
-#define assert(% 1)
-#define assert_msg(% 1, % 2)
-#endif
-
 #pragma semicolon 1
 #include <sourcemod>
 #include <mapchooser>
@@ -87,8 +75,6 @@ public Plugin myinfo
         description = "Automated Map Voting with Extensions",
         version     = MCE_VERSION,
         url         = "https://forums.alliedmods.net/showthread.php?t=156974"
-
-    
 };
 
 /* Valve ConVars */
