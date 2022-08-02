@@ -22,8 +22,7 @@ jobs:
     - name: Give spcomp the required permissions
       run: chmod +x addons/sourcemod/scripting/spcomp
     - name: Compiling the plugin
-      working-directory: addons/sourcemod/scripting
       run: |
-        spcomp -E mapchooser_extended.sp
-        spcomp -E nominateions_extended.sp
-        spcomp -E rockthevote_extended.sp
+        addons/sourcemod/scripting/spcomp -E addons/sourcemod/scripting/mapchooser_extended.sp
+        addons/sourcemod/scripting/spcomp -E addons/sourcemod/scripting/nominateions_extended.sp
+        addons/sourcemod/scripting/spcomp -E addons/sourcemod/scripting/rockthevote_extended.sp
