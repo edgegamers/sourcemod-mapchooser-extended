@@ -21,7 +21,5 @@ jobs:
         tar -xzf sourcemod.tar.gz
         chmod +x addons/sourcemod/scripting/spcomp
         cd addons/sourcemod/scripting
-    - name: Give permissions
-      run: chmod +x spcomp
     - name: Compile the plugin
       run: for file in .; do spcomp -E $file; done
