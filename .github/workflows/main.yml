@@ -23,4 +23,6 @@ jobs:
       run: chmod +x addons/sourcemod/scripting/spcomp
     - name: Compiling the plugin
       run: |
-        for file in addons/sourcemod/scripting/*; do addons/sourcemod/scripting/spcomp -E "$file"; done
+        addons/sourcemod/scripting/spcomp -E mapchooser_extended.sp
+        addons/sourcemod/scripting/spcomp -E nominateions_extended.sp
+        addons/sourcemod/scripting/spcomp -E rockthevote_extended.sp
