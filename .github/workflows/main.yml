@@ -23,6 +23,7 @@ jobs:
       run: |
         wget "https://github.com/Bara/Multi-Colors/archive/refs/heads/master.zip" -O MultiColors.zip
         unzip MultiColors.zip
+        mkdir -p addons/sourcemod/scripting/include
         cd addons/sourcemod/scripting/include
         mv * addons/sourcemod/scripting/include
     - name: Give spcomp the required permissions
