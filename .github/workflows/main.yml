@@ -19,6 +19,7 @@ jobs:
       run: |
         wget "http://www.sourcemod.net/latest.php?version=1.10&os=linux" -O sourcemod.tar.gz
         tar -xzf sourcemod.tar.gz
+        chmod +x addons/sourcemod/scripting/spcomp
         cd addons/sourcemod/scripting
     - name: Give permissions
       run: chmod +x spcomp
