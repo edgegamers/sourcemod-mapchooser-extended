@@ -19,8 +19,8 @@ jobs:
       run: |
         wget "http://www.sourcemod.net/latest.php?version=1.10&os=linux" -O sourcemod.tar.gz
         tar -xzf sourcemod.tar.gz
-    - name: Compile the plugin
+    - name: Give spcomp the required permissions
+      run: chmod +x addons/sourcemod/scripting/spcomp
+    - name: Compiling the plugin
       run: |
-        chmod +x addons/sourcemod/scripting/spcomp
-        cd addons/sourcemod/scripting
-        for file in .; do spcomp -E $file; done
+        for file in addons/sourcemod/scripting; do addons/sourcemod/scripting/spcomp -E $file; done
