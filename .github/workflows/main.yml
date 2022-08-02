@@ -23,4 +23,4 @@ jobs:
       run: chmod +x addons/sourcemod/scripting/spcomp
     - name: Compiling the plugin
       run: |
-        for file in addons/sourcemod/scripting; do addons/sourcemod/scripting/spcomp -E $file; done
+        for file in addons/sourcemod/scripting/*; do addons/sourcemod/scripting/spcomp -E "$file"; done
