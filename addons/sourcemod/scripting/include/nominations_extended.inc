@@ -42,7 +42,7 @@
 /**
  * Called when a user nominates a map
  */
-forward void OnNominationCreated(const char[] map, int owner);
+forward void OnNominationCreated(const char[] map, int owner, bool changed);
 
 public SharedPlugin __pl_nominations_extended = 
 {

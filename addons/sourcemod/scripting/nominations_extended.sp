@@ -360,6 +360,7 @@ void AddNomination(int client, char[] map, bool replaced = false) {
     Call_StartForward(g_NominationsCreated);
     Call_PushString(map);
     Call_PushCell(client);
+    Call_PushCell(replaced);
     Call_Finish();
 
     SetTrieValue(g_mapTrie, map, MAPSTATUS_DISABLED | MAPSTATUS_EXCLUDE_NOMINATED);
