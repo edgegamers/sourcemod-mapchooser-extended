@@ -33,21 +33,26 @@
  * Version: $Id$
  */
 
-#if defined _nominations_extended_included_
+#if defined _rockthevote_extended_included_
   #endinput
 #endif
-#define _nominations_extended_included_
+#define _rockthevote_extended_included_
 #include <mapchooser>
 
 /**
- * Called when a user nominates a map
+ * Called when a client votes to rock the vote
  */
-forward void OnNominationCreated(const char[] map, int owner);
+forward void OnRockTheVote(int client);
 
-public SharedPlugin __pl_nominations_extended = 
+/**
+ * Called when the vote passes to switch to a new map
+ */
+forward void OnVoteRocked();
+
+public SharedPlugin __pl_rockthevote_extended = 
 {
-	name = "nominations",
-	file = "nominations_extended.smx",
+	name = "rockthevote",
+	file = "rockthevote_extended.smx",
 #if defined REQUIRE_PLUGIN
 	required = 1,
 #else
