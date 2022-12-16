@@ -104,7 +104,7 @@ public void OnPluginStart() {
     g_Cvar_MaxTier        = CreateConVar("sm_nominate_max_tier", "10", "The maximum tier to show on the enhanced menu", _, true, 0.0, true, 10.0);
     g_Cvar_ChatPrefix     = CreateConVar("sm_nominate_chatprefix", "[MCE] ", "Chat prefix for all Nominations Extended related messages");
 
-    g_NominationsCreated = CreateGlobalForward("OnNominationCreated", ET_Ignore, Param_String, Param_Cell);
+    g_NominationsCreated = CreateGlobalForward("OnNominationCreated", ET_Ignore, Param_String, Param_Cell, Param_Cell);
 
     RegConsoleCmd("sm_nominate", Command_Nominate);
 
