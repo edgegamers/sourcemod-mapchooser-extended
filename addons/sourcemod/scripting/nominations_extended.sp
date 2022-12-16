@@ -363,7 +363,9 @@ void AddNomination(int client, char[] map, bool replaced = false) {
     Call_Finish();
 
     SetTrieValue(g_mapTrie, map, MAPSTATUS_DISABLED | MAPSTATUS_EXCLUDE_NOMINATED);
-    CPrintToChatAll("%N%t", g_szChatPrefix, replaced ? "Map Nomination Changed" : "Map Nominated", client, map);
+    char name[MAX_NAME_LENGTH];
+    GetClientName(client, name, sizeof(name));
+    CPrintToChatAll("%s%t", g_szChatPrefix, replaced ? "Map Nomination Changed" : "Map Nominated", name, map);
     LogMessage("\"%L\" nominated %s", client, map);
 }
 
