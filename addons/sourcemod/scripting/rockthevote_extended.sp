@@ -199,7 +199,7 @@ public void OnClientSayCommand_Post(int client, const char[] command, const char
         return;
     }
 
-    if (strcmp(sArgs, "rtv", false) == 0 || strcmp(sArgs, "rockthevote", false) == 0) {
+    if (strcmp(sArgs, "badmap", false) == 0 || strcmp(sArgs, "rtv", false) == 0 || strcmp(sArgs, "rockthevote", false) == 0) {
         ReplySource old = SetCmdReplySource(SM_REPLY_TO_CHAT);
 
         AttemptRTV(client);
