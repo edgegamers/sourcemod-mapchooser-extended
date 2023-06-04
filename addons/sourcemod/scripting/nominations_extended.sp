@@ -345,7 +345,7 @@ void ShowMatches(int client, char[] mapname) {
                     CReplyToCommand(client, "%s%t", g_szChatPrefix, "Map Already Nominated");
                 }
             } else {
-                AddNomination(client, lastMap);
+                AddNomination(client, lastMap, result = Nominate_Replaced);
             }
 
             delete SubMapMenu;
@@ -554,7 +554,7 @@ public int Handler_MapSelectMenu(Menu menu, MenuAction action, int param1, int p
                 return 0;
             }
 
-            AddNomination(param1, map, true);
+            AddNomination(param1, map, result == Nominate_Replaced);
         }
 
         case MenuAction_DrawItem: {
