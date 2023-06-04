@@ -319,7 +319,7 @@ public Action Command_ForceRTV(int client, int args) {
         return Plugin_Handled;
     }
 
-    ShowActivity2(client, "%s", "%t", g_szChatPrefix, "Initiated Vote Map");
+    ShowActivity2(client, "%s%t", g_szChatPrefix, "Initiated Vote Map");
 
     StartRTV();
 
