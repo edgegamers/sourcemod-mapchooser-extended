@@ -540,7 +540,7 @@ void PrintNominatedMaps(int client) {
     ArrayList excludeMaps = CreateArray(ByteCountToCells(PLATFORM_MAX_PATH));
     GetExcludeMapList(excludeMaps);
 
-    CPrintToChat(client, "%s%t", g_szChatPrefix, "Nominated Maps:");
+    CPrintToChat(client, "%s%s", g_szChatPrefix, "Nominated Maps:");
 
     for (int i = 0; i < GetArraySize(g_MapList); i++) {
         GetArrayString(g_MapList, i, map, sizeof(map));
@@ -568,9 +568,9 @@ void PrintNominatedMaps(int client) {
         if (GetConVarBool(g_Cvar_DisplayName)) {
             char mapName[PLATFORM_MAX_PATH];
             GetMapName(map, mapName, sizeof(mapName));
-            CPrintToChat(client, "%s%t", g_szChatPrefix, mapName);
+            CPrintToChat(client, "%s%s", g_szChatPrefix, mapName);
         } else {
-            CPrintToChat(client, "%s%t", g_szChatPrefix, map);
+            CPrintToChat(client, "%s%s", g_szChatPrefix, map);
         }
     }
 }
