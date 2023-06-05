@@ -562,7 +562,7 @@ void PrintNominatedMaps(int client) {
             continue;
         }
 
-        if (!((status & MAPSTATUS_EXCLUDE_NOMINATED) == MAPSTATUS_EXCLUDE_NOMINATED))
+        if ((status & MAPSTATUS_EXCLUDE_NOMINATED) != MAPSTATUS_EXCLUDE_NOMINATED)
             continue;
 
         if (GetConVarBool(g_Cvar_DisplayName)) {
