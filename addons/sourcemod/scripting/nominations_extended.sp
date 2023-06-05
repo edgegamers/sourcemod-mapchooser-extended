@@ -532,6 +532,49 @@ void AddMapToTierMenu(int tier, char[] map, char[] mapName) {
     }
 }
 
+void PrintNominatedMaps(int client) {
+    char map[PLATFORM_MAX_PATH];
+    char currentMap[32];
+    GetCurrentMap(currentMap, sizeof(currentMap));
+
+    ArrayList excludeMaps = CreateArray(ByteCountToCells(PLATFORM_MAX_PATH));
+    GetExcludeMapList(excludeMaps);
+
+    CPrintToChat(client, "%s%t", g_szChatPrefix, "Nominated Maps:");
+
+    for (int i = 0; i < GetArraySize(g_MapList); i++) {
+        GetArrayString(g_MapList, i, map, sizeof(map));
+
+        if (GetConVarBool(g_Cvar_ExcludeCurrent) && StrEqual(map, currentMap)) {
+            // isCurrent = true;
+            continue;
+        }
+
+        if (GetConVarBool(g_Cvar_ExcludeOld) && FindStringInArray(excludeMaps, map) != -1) {
+            // isExclude = true;
+            continue;
+        }
+
+        int status;
+
+        if (!GetTrieValue(g_mapTrie, map, status)) {
+            LogError("Menu selection of item not in trie. Major logic problem somewhere.");
+            continue;
+        }
+
+        if (!((status & MAPSTATUS_EXCLUDE_NOMINATED) == MAPSTATUS_EXCLUDE_NOMINATED))
+            continue;
+
+        if (GetConVarBool(g_Cvar_DisplayName)) {
+            char mapName[PLATFORM_MAX_PATH];
+            GetMapName(map, mapName, sizeof(mapName));
+            CPrintToChat(client, "%s%t", g_szChatPrefix, mapName);
+        } else {
+            CPrintToChat(client, "%s%t", g_szChatPrefix, map);
+        }
+    }
+}
+
 public int Handler_MapSelectMenu(Menu menu, MenuAction action, int param1, int param2) {
     switch (action) {
         case MenuAction_Select: {
@@ -683,6 +726,7 @@ stock bool IsNominateAllowed(int client) {
 
         case CanNominate_No_VoteFull: {
             CReplyToCommand(client, "%s%t", g_szChatPrefix, "Max Nominations");
+            PrintNominatedMaps(client);
             return false;
         }
     }
