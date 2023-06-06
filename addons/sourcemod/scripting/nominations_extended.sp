@@ -725,9 +725,19 @@ stock bool IsNominateAllowed(int client) {
         }
 
         case CanNominate_No_VoteFull: {
-            CReplyToCommand(client, "%s%t", g_szChatPrefix, "Max Nominations");
-            PrintNominatedMaps(client);
-            return false;
+            // Check if client has nominated a map
+            ArrayList mapList   = CreateArray(ByteCountToCells(PLATFORM_MAX_PATH));
+            ArrayList ownerList = CreateArray(1);
+            GetNominatedMapList(mapList, ownerList);
+            int idx = ownerList.FindValue(client);
+            delete mapList;
+            delete ownerList;
+            if (idx == -1) {
+                CReplyToCommand(client, "%s%t", g_szChatPrefix, "Max Nominations");
+                PrintNominatedMaps(client);
+                return false;
+            }
+            return true;
         }
     }
 
