@@ -2,7 +2,7 @@
 {
 	"Vote Nextmap"
 	{
-		"en"			"Vote for the next map!"
+		"en"			"Vote for the next map! (%d/%d)"
 	}	
 
 	"Nextmap Voting Started"

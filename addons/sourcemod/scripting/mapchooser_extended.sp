@@ -1199,7 +1199,7 @@ public int Handler_MapVoteMenu(Menu menu, MenuAction action, int param1, int par
 
         case MenuAction_Display: {
             char buffer[255];
-            Format(buffer, sizeof(buffer), "%T", "Vote Nextmap", param1);
+            Format(buffer, sizeof(buffer), "%T", "Vote Nextmap", param1, GetRankedVotes(param1) + 1, RANKED_VOTES);
             Handle panel = view_as<Handle>(param2);
             SetPanelTitle(panel, buffer);
         }
@@ -1375,7 +1375,7 @@ Action Timer_CountVotes(Handle timer) {
     char winner[PLATFORM_MAX_PATH];
     bool found = false;
     int iters  = 0;
-    while (!found && iters++ < 20) {
+    while (!found && iters++ < 50) {
         for (int i = 0; i < votes.Length; i++)
             votes.Set(i, 0);
         totalVotes = 0;
@@ -1417,6 +1417,13 @@ Action Timer_CountVotes(Handle timer) {
         PrintToConsoleAll("Eliminating %s due to only %d votes", loser, minVotes);
         candidates.Erase(minCandidateIndex);
         votes.Erase(minCandidateIndex);
+
+        if(candidates.Length == 1) {
+            g_VoteList.GetString(candidates.Get(0), winner, sizeof(winner));
+            PrintToConsoleAll("Winner by elimination is %s with %d/%d votes", winner, votes.Get(0), totalVotes);
+            found = true;
+            break;
+        }
 
         for (int client = 1; client <= MaxClients; client++) {
             if (!IsClientInGame(client) || IsFakeClient(client))
