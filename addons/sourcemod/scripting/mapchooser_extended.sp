@@ -130,6 +130,7 @@ bool g_ChangeMapAtRoundEnd;
 bool g_ChangeMapInProgress;
 bool g_HasIntermissionStarted = false;
 int g_mapFileSerial           = -1;
+int g_voteCountTime;
 
 int g_NominateCount = 0;
 MapChange g_ChangeTime;
@@ -968,14 +969,15 @@ void SendVoteMenu(int client, MapChange when, Handle inputlist = INVALID_HANDLE)
     }
     // CloseHandle(inputlist);
 
-    int voteDuration = g_Cvar_VoteDuration.IntValue;
+    // int voteDuration = g_Cvar_VoteDuration.IntValue;
+    // g_voteCountTime = GetTime() + voteDuration;
 
     if (GetVoteSize() <= GetMaxPageItems(GetMenuStyle(voteMenu))) {
         // This is necessary to get items 9 and 0 as usable voting items
         SetMenuPagination(voteMenu, MENU_NO_PAGINATION);
     }
 
-    DisplayMenu(voteMenu, client, voteDuration / (RANKED_VOTES - 1));
+    DisplayMenu(voteMenu, client, g_voteCountTime - GetTime() - 2);
 }
 
 /**
@@ -1118,6 +1120,9 @@ void InitiateVote(MapChange when, Handle inputlist = INVALID_HANDLE) { // TODO: 
         g_VoteList.PushString(map);
     }
 
+    float voteDuration = g_Cvar_VoteDuration.FloatValue;
+    g_voteCountTime    = GetTime() + RoundToFloor(voteDuration);
+
     for (int i = 1; i <= MaxClients; i++) {
         if (!IsClientInGame(i) || IsFakeClient(i)) {
             continue;
@@ -1136,8 +1141,7 @@ void InitiateVote(MapChange when, Handle inputlist = INVALID_HANDLE) { // TODO: 
     LogAction(-1, -1, "Voting for next map has started.");
     CPrintToChatAll("%s%t", g_szChatPrefix, "Nextmap Voting Started");
 
-    float voteDuration = g_Cvar_VoteDuration.FloatValue;
-    g_CountTimer       = CreateTimer(voteDuration, Timer_CountVotes, _, TIMER_FLAG_NO_MAPCHANGE);
+    g_CountTimer = CreateTimer(voteDuration, Timer_CountVotes, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void Handler_VoteFinishedGeneric(Handle menu, int num_votes, int num_clients, const int[][] client_info, int num_items, const int[][] item_info) {
@@ -1277,7 +1281,7 @@ public int Handler_MapVoteMenu(Menu menu, MenuAction action, int param1, int par
             int vote                    = GetRankedVotes(param1);
             g_RankedVotes[param1][vote] = param2;
             ArrayList mapList           = new ArrayList(PLATFORM_MAX_PATH);
-            PrintToChatAll("%N put %s (%d) as their %d vote", param1, item, param2, vote);
+            PrintToConsoleAll("%N put %s (%d) as their %d vote", param1, item, param2, vote);
             for (int i = 0; i < menu.ItemCount; i++) {
                 // char item[PLATFORM_MAX_PATH];
                 menu.GetItem(i, item, sizeof(item));
@@ -1299,7 +1303,7 @@ public int Handler_MapVoteMenu(Menu menu, MenuAction action, int param1, int par
                 }
                 return 0;
             }
-            SendVoteMenu(param1, MapChange_RoundEnd, mapList);
+            SendVoteMenu(param1, MapChange_MapEnd, mapList);
         }
 
         case MenuAction_DisplayItem: {
@@ -1408,7 +1412,7 @@ Action Timer_CountVotes(Handle timer) {
 
     if (totalVotes == 0) {
         int rnd = GetRandomInt(0, g_NextMapList.Length - 1);
-        PrintToChatAll("Voting has ended with no votes, randomly picking...");
+        PrintToConsoleAll("Voting has ended with no votes, randomly picking...");
         char winner[PLATFORM_MAX_PATH];
         g_NextMapList.GetString(rnd, winner, sizeof(winner));
         MapVoteWin(winner);
@@ -1431,9 +1435,10 @@ Action Timer_CountVotes(Handle timer) {
     for (int i = 0; i < candidates.Length; i++) {
         char buffer[PLATFORM_MAX_PATH];
         g_VoteList.GetString(candidates.Get(i), buffer, sizeof(buffer));
-        PrintToChatAll("Candidate %d: %s", i, buffer);
+        PrintToConsoleAll("Candidate %d: %s", i, buffer);
     }
-    PrintToChatAll("Voting has ended with %d votes across %d maps, calculating winner...", totalVotes, candidates.Length);
+    PrintToConsoleAll("Voting has ended with %d votes across %d maps, calculating winner...", totalVotes, candidates.Length);
+
     char winner[PLATFORM_MAX_PATH];
     bool found = false;
     while (!found) {
@@ -1447,7 +1452,7 @@ Action Timer_CountVotes(Handle timer) {
         for (int i = 0; i < candidates.Length; i++) {
             if (votes.Get(i) > totalVotes / 2) {
                 g_VoteList.GetString(candidates.Get(i), winner, sizeof(winner));
-                PrintToChatAll("Winner by majority is %s with %d votes", winner, votes.Get(i));
+                PrintToConsoleAll("Winner by majority is %s with %d votes", winner, votes.Get(i));
                 found = true;
                 break;
             }
@@ -1466,7 +1471,7 @@ Action Timer_CountVotes(Handle timer) {
 
         char loser[PLATFORM_MAX_PATH];
         g_VoteList.GetString(candidates.Get(minCandidate), loser, sizeof(loser));
-        PrintToChatAll("Eliminating %s due to only %d votes", loser, minVotes);
+        PrintToConsoleAll("Eliminating %s due to only %d votes", loser, minVotes);
 
         if (minCandidate == -1)
             ThrowError("Error calculating winner, minCandidate is %d with minVotes being", minCandidate, minVotes);
