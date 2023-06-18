@@ -1103,6 +1103,14 @@ void InitiateVote(MapChange when, Handle inputlist = INVALID_HANDLE) { // TODO: 
         }
     }
 
+    ResetRankedVotes();
+
+    for (int i = 0; i < GetArraySize(inputlist); i++) {
+        char map[PLATFORM_MAX_PATH];
+        GetArrayString(inputlist, i, map, PLATFORM_MAX_PATH);
+        g_VoteList.PushString(map);
+    }
+
     for (int i = 1; i <= MaxClients; i++) {
         if (!IsClientInGame(i) || IsFakeClient(i)) {
             continue;
@@ -1127,48 +1135,10 @@ void InitiateVote(MapChange when, Handle inputlist = INVALID_HANDLE) { // TODO: 
 public void Handler_VoteFinishedGeneric(Handle menu, int num_votes, int num_clients, const int[][] client_info, int num_items, const int[][] item_info) {
     char map[PLATFORM_MAX_PATH];
     GetMapItem(menu, item_info[0][VOTEINFO_ITEM_INDEX], map, PLATFORM_MAX_PATH);
-
-    Call_StartForward(g_MapVoteEndForward);
-    Call_PushString(map);
-    Call_Finish();
-
-    if (strcmp(map, VOTE_EXTEND, false) == 0) {
-        ExtendMap();
-        CPrintToChatAll("%s%t", g_szChatPrefix, "Current Map Extended", RoundToFloor(float(item_info[0][VOTEINFO_ITEM_VOTES]) / float(num_votes) * 100), num_votes);
-        LogAction(-1, -1, "Voting for next map has finished. The current map has been extended.");
-    } else if (strcmp(map, VOTE_DONTCHANGE, false) == 0) {
-        CPrintToChatAll("%s%t", g_szChatPrefix, "Current Map Stays", RoundToFloor(float(item_info[0][VOTEINFO_ITEM_VOTES]) / float(num_votes) * 100), num_votes);
-        LogAction(-1, -1, "Voting for next map has finished. 'No Change' was the winner");
-
-        g_HasVoteStarted = false;
-        CreateNextVote();
-        SetupTimeleftTimer();
-    } else {
-        if (g_ChangeTime == MapChange_MapEnd) {
-            SetNextMap(map);
-        } else if (g_ChangeTime == MapChange_Instant) {
-            Handle data;
-            LogAction(-1, -1, "change map in 4.0");
-            CreateDataTimer(4.0, Timer_ChangeMap, data);
-            WritePackString(data, map);
-            g_ChangeMapInProgress = false;
-        } else // MapChange_RoundEnd
-        {
-            SetNextMap(map);
-            g_ChangeMapAtRoundEnd = true;
-        }
-
-        g_HasVoteStarted   = false;
-        g_MapVoteCompleted = true;
-
-        char mapName[PLATFORM_MAX_PATH];
-        getMapName(map, mapName, sizeof(mapName));
-        CPrintToChatAll("%s%t", g_szChatPrefix, "Nextmap Voting Finished", mapName, RoundToFloor(float(item_info[0][VOTEINFO_ITEM_VOTES]) / float(num_votes) * 100), num_votes);
-        LogAction(-1, -1, "Voting for next map has finished. Nextmap: %s.", map);
-    }
+    // MapVoteWin(map);
 }
 
-void MapVoteWin(const char[] map) {
+public void MapVoteWin(const char[] map) {
     // char map[PLATFORM_MAX_PATH];
     // GetMapItem(menu, item_info[0][VOTEINFO_ITEM_INDEX], map, PLATFORM_MAX_PATH);
 
@@ -1181,7 +1151,7 @@ void MapVoteWin(const char[] map) {
         // CPrintToChatAll("%s%t", g_szChatPrefix, "Current Map Extended", RoundToFloor(float(item_info[0][VOTEINFO_ITEM_VOTES]) / float(num_votes) * 100), num_votes);
         LogAction(-1, -1, "Voting for next map has finished. The current map has been extended.");
     } else if (strcmp(map, VOTE_DONTCHANGE, false) == 0) {
-        CPrintToChatAll("%s%t", g_szChatPrefix, "Current Map Stays", RoundToFloor(float(item_info[0][VOTEINFO_ITEM_VOTES]) / float(num_votes) * 100), num_votes);
+        // CPrintToChatAll("%s%t", g_szChatPrefix, "Current Map Stays", RoundToFloor(float(item_info[0][VOTEINFO_ITEM_VOTES]) / float(num_votes) * 100), num_votes);
         LogAction(-1, -1, "Voting for next map has finished. 'No Change' was the winner");
 
         g_HasVoteStarted = false;
@@ -1207,7 +1177,7 @@ void MapVoteWin(const char[] map) {
 
         char mapName[PLATFORM_MAX_PATH];
         getMapName(map, mapName, sizeof(mapName));
-        CPrintToChatAll("%s%t", g_szChatPrefix, "Nextmap Voting Finished", mapName, RoundToFloor(float(item_info[0][VOTEINFO_ITEM_VOTES]) / float(num_votes) * 100), num_votes);
+        // CPrintToChatAll("%s%t", g_szChatPrefix, "Nextmap Voting Finished", mapName, RoundToFloor(float(item_info[0][VOTEINFO_ITEM_VOTES]) / float(num_votes) * 100), num_votes);
         LogAction(-1, -1, "Voting for next map has finished. Nextmap: %s.", map);
     }
 }
@@ -1301,6 +1271,18 @@ public int Handler_MapVoteMenu(Menu menu, MenuAction action, int param1, int par
                 mapList.PushString(item);
             }
             if (vote + 1 >= RANKED_VOTES) {
+                bool finishVote = true;
+                for (int i = 1; i <= MaxClients; i++) {
+                    if (!IsClientInGame(i) || IsFakeClient(i))
+                        continue;
+                    if (GetRankedVotes(i) < RANKED_VOTES) {
+                        finishVote = false;
+                        break;
+                    }
+                }
+                if (finishVote) {
+                    Timer_CountVotes(INVALID_HANDLE);
+                }
                 return 0;
             }
             SendVoteMenu(param1, MapChange_RoundEnd, mapList);
@@ -1399,9 +1381,7 @@ public Action Timer_ChangeMap(Handle hTimer, Handle dp) {
     return Plugin_Stop;
 }
 
-Action Timer_CountVotes(Handle timer, any data) {
-    PrintToChatAll("Voting has ended. Calculating winner...");
-    // StringMap votes;
+Action Timer_CountVotes(Handle timer) {
     ArrayList candidates = new ArrayList();
     ArrayList votes      = new ArrayList();
     ArrayList ballots    = new ArrayList(RANKED_VOTES);
@@ -1411,6 +1391,12 @@ Action Timer_CountVotes(Handle timer, any data) {
         if (!IsClientInGame(client) || IsFakeClient(client) || GetRankedVotes(client) == 0)
             continue;
         totalVotes++;
+    }
+    if (totalVotes == 0) {
+        delete candidates;
+        delete votes;
+        delete ballots;
+        return Plugin_Stop;
     }
 
     for (int client = 1; client <= MaxClients; client++) {
@@ -1425,36 +1411,56 @@ Action Timer_CountVotes(Handle timer, any data) {
         }
     }
 
-    int ranks = 0;
-    while (candidates.Length > 1) {
-        for (int client = 1; client <= MaxClients; client++) {
-            if (!IsClientInGame(client) || IsFakeClient(client) || GetRankedVotes(client) == 0)
-                continue;
-            int firstChoice = GetRankedClientVoteFromOrder(client, ranks);
-            if (candidates.FindValue(firstChoice) != -1) {
-                votes.Set(firstChoice, votes.Get(firstChoice) + 1);
-            }
+    PrintToChatAll("Voting has ended with %d votes across %d maps, calculating winner...", totalVotes, candidates.Length);
+    char winner[PLATFORM_MAX_PATH];
+    bool found = false;
+    while (!found) {
+        for (int i = 0; i < ballots.Length; i++) {
+            int buffer[RANKED_VOTES];
+            ballots.GetArray(i, buffer);
+            int candidateIndex = candidates.FindValue(buffer[0]);
+            votes.Set(candidateIndex, votes.Get(candidateIndex) + 1);
         }
 
-        for (int i = 0; i <= candidates.Length; i++) {
+        for (int i = 0; i < candidates.Length; i++) {
             if (votes.Get(i) > totalVotes / 2) {
-                // We have a winner!
-                // char map[PLATFORM_MAX_PATH];
-                // GetMapNameFromIndex(candidates.Get(i), map, sizeof(map));
-                // SetNextMap(map);
-                // g_MapVoteCompleted = true;
-                // return Plugin_Stop;
+                g_VoteList.GetString(candidates.Get(i), winner, sizeof(winner));
+                found = true;
+                break;
             }
         }
 
-        int minVotes = 999999;
-        for (int i = 0; i < votes.Length; i++) {
+        int minVotes     = totalVotes;
+        int minCandidate = -1;
+        for (int i = 0; i < candidates.Length; i++) {
             if (votes.Get(i) < minVotes) {
-                minVotes = votes.Get(i);
+                minVotes     = votes.Get(i);
+                minCandidate = i;
+            }
+        }
+
+        if (minCandidate == -1)
+            ThrowError("Error calculating winner");
+
+        for (int client = 1; client <= MaxClients; client++) {
+            for (int vote = 0; vote < RANKED_VOTES; vote++) {
+                if (g_RankedVotes[client][vote] == minCandidate) {
+                    for (int k = vote; k < candidates.Length - 1; k++) {
+                        g_RankedVotes[client][k] = g_RankedVotes[client][k + 1];
+                    }
+                    break;
+                }
             }
         }
     }
 
+    // g_VoteList.GetString(candidates.Get(0), winner, sizeof(winner));
+    MapVoteWin(winner);
+    delete candidates;
+    delete votes;
+    delete ballots;
+    g_VoteList.Clear();
+    ResetRankedVotes();
     return Plugin_Stop;
 }
 
@@ -1470,7 +1476,6 @@ bool RemoveStringFromArray(Handle array, char[] str) {
 
 void CreateNextVote() {
     g_NextMapList.Clear();
-    g_VoteList.Clear();
 
     char map[PLATFORM_MAX_PATH];
     Handle tempMaps = CloneArray(g_MapList);
@@ -1980,6 +1985,13 @@ void ResetRankedVotes(int client = -1) {
     }
 }
 
+// 0 : No Vote
+//
+// Returns the client's preferrence given a vote value.
+// eg: client voted A, B, C
+// if a is at 0, b is at 1, c is at 2
+// GetRankedClientVoteFromIndex(client, 0) would get the preference that the client
+// voted for a, -1 if not voted
 int GetRankedClientVoteFromIndex(int client, int index) {
     for (int i = 0; i < RANKED_VOTES; i++) {
         if (g_RankedVotes[client][i] == index)
@@ -1988,6 +2000,14 @@ int GetRankedClientVoteFromIndex(int client, int index) {
     return -1;
 }
 
+// Returns the client's preferred vote given the position.
+// eg: client voted A, B, C
+// GetRankedClientVoteFromOrder(client, 0) = A
+// GetRankedClientVoteFromOrder(client, 1) = B
+// GetRankedClientVoteFromOrder(client, 2) = C
+// eg: client voted A, null, null
+// GetRankedClientVoteFromOrder(client, 0) = A
+// GetRankedClientVoteFromOrder(client, 1) = A
 int GetRankedClientVoteFromOrder(int client, int position) {
     int vote = g_RankedVotes[client][0];
     for (int i = 0; i < RANKED_VOTES; i++) {
