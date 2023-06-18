@@ -2008,13 +2008,13 @@ int GetRankedClientVoteFromIndex(int client, int index) {
 // eg: client voted A, null, null
 // GetRankedClientVoteFromOrder(client, 0) = A
 // GetRankedClientVoteFromOrder(client, 1) = A
-int GetRankedClientVoteFromOrder(int client, int position) {
-    int vote = g_RankedVotes[client][0];
-    for (int i = 0; i < RANKED_VOTES; i++) {
-        if (g_RankedVotes[client][i] == -1)
-            return vote;
-        if (g_RankedVotes[client][i] > -1 && i >= position)
-            return i;
-    }
-    return vote;
-}
+// int GetRankedClientVoteFromOrder(int client, int position) {
+//     int vote = g_RankedVotes[client][0];
+//     for (int i = 0; i < RANKED_VOTES; i++) {
+//         if (g_RankedVotes[client][i] == -1)
+//             return vote;
+//         if (g_RankedVotes[client][i] > -1 && i >= position)
+//             return i;
+//     }
+//     return vote;
+// }
