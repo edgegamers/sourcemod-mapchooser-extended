@@ -141,9 +141,9 @@ Handle g_MapVoteStartedForward   = INVALID_HANDLE;
 /* Mapchooser Extended Plugin ConVars */
 
 ConVar g_Cvar_RunOff;
-ConVar g_Cvar_RunOffPercent;
+// ConVar g_Cvar_RunOffPercent;
 ConVar g_Cvar_BlockSlots;
-ConVar g_Cvar_MaxRunOffs;
+// ConVar g_Cvar_MaxRunOffs;
 ConVar g_Cvar_StartTimePercent;
 ConVar g_Cvar_StartTimePercentEnable;
 ConVar g_Cvar_WarningTime;
@@ -243,10 +243,10 @@ public void OnPluginStart() {
     CreateConVar("mce_version", MCE_VERSION, "MapChooser Extended Version", FCVAR_SPONLY | FCVAR_NOTIFY | FCVAR_DONTRECORD);
 
     g_Cvar_RunOff        = CreateConVar("mce_runoff", "1", "Hold run off votes if winning choice has less than a certain percentage of votes", _, true, 0.0, true, 1.0);
-    g_Cvar_RunOffPercent = CreateConVar("mce_runoffpercent", "50", "If winning choice has less than this percent of votes, hold a runoff", _, true, 0.0, true, 100.0);
+    // g_Cvar_RunOffPercent = CreateConVar("mce_runoffpercent", "50", "If winning choice has less than this percent of votes, hold a runoff", _, true, 0.0, true, 100.0);
     g_Cvar_BlockSlots    = CreateConVar("mce_blockslots", "1", "Block slots to prevent accidental votes.  Only applies when Voice Command style menus are in use.", _, true, 0.0, true, 1.0);
     // g_Cvar_BlockSlotsCount = CreateConVar("mce_blockslots_count", "2", "Number of slots to block.", _, true, 1.0, true, 3.0);
-    g_Cvar_MaxRunOffs             = CreateConVar("mce_maxrunoffs", "1", "Number of run off votes allowed each map.", _, true, 0.0);
+    // g_Cvar_MaxRunOffs             = CreateConVar("mce_maxrunoffs", "1", "Number of run off votes allowed each map.", _, true, 0.0);
     g_Cvar_StartTimePercent       = CreateConVar("mce_start_percent", "35.0", "Specifies when to start the vote based on percents.", _, true, 0.0, true, 100.0);
     g_Cvar_StartTimePercentEnable = CreateConVar("mce_start_percent_enable", "0", "Enable or Disable percentage calculations when to start vote.", _, true, 0.0, true, 1.0);
     g_Cvar_WarningTime            = CreateConVar("mce_warningtime", "15.0", "Warning time in seconds.", _, true, 0.0, true, 60.0);
@@ -1144,12 +1144,6 @@ void InitiateVote(MapChange when, Handle inputlist = INVALID_HANDLE) { // TODO: 
     g_CountTimer = CreateTimer(voteDuration, Timer_CountVotes, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
-public void Handler_VoteFinishedGeneric(Handle menu, int num_votes, int num_clients, const int[][] client_info, int num_items, const int[][] item_info) {
-    char map[PLATFORM_MAX_PATH];
-    GetMapItem(menu, item_info[0][VOTEINFO_ITEM_INDEX], map, PLATFORM_MAX_PATH);
-    // MapVoteWin(map);
-}
-
 public void MapVoteWin(const char[] map) {
     // char map[PLATFORM_MAX_PATH];
     // GetMapItem(menu, item_info[0][VOTEINFO_ITEM_INDEX], map, PLATFORM_MAX_PATH);
@@ -1193,69 +1187,6 @@ public void MapVoteWin(const char[] map) {
         // CPrintToChatAll("%s%t", g_szChatPrefix, "Nextmap Voting Finished", mapName, RoundToFloor(float(item_info[0][VOTEINFO_ITEM_VOTES]) / float(num_votes) * 100), num_votes);
         LogAction(-1, -1, "Voting for next map has finished. Nextmap: %s.", map);
     }
-}
-
-public int Handler_MapVoteFinished(Handle menu, int num_votes, int num_clients, const int[][] client_info, int num_items, const int[][] item_info) {
-    // Implement revote logic - Only run this` block if revotes are enabled and this isn't the last revote
-    if (g_Cvar_RunOff.BoolValue && num_items > 1 && g_RunoffCount < g_Cvar_MaxRunOffs.IntValue) {
-        g_RunoffCount++;
-        int highest_votes    = item_info[0][VOTEINFO_ITEM_VOTES];
-        int required_percent = g_Cvar_RunOffPercent.IntValue;
-        int required_votes   = RoundToCeil(float(num_votes) * float(required_percent) / 100);
-
-        if (highest_votes == item_info[1][VOTEINFO_ITEM_VOTES]) {
-            g_HasVoteStarted = false;
-
-            // Revote is needed
-            int arraySize  = ByteCountToCells(PLATFORM_MAX_PATH);
-            Handle mapList = CreateArray(arraySize);
-
-            for (int i = 0; i < num_items; i++) {
-                if (item_info[i][VOTEINFO_ITEM_VOTES] == highest_votes) {
-                    char map[PLATFORM_MAX_PATH];
-
-                    GetMapItem(menu, item_info[i][VOTEINFO_ITEM_INDEX], map, PLATFORM_MAX_PATH);
-                    PushArrayString(mapList, map);
-                } else {
-                    break;
-                }
-            }
-
-            CPrintToChatAll("%s%t", g_szChatPrefix, "Tie Vote", GetArraySize(mapList));
-            SetupWarningTimer(WarningType_Revote, view_as<MapChange>(g_ChangeTime), mapList);
-            return 0;
-        } else if (highest_votes < required_votes) {
-            g_HasVoteStarted = false;
-
-            // Revote is needed
-            int arraySize  = ByteCountToCells(PLATFORM_MAX_PATH);
-            Handle mapList = CreateArray(arraySize);
-
-            char map1[PLATFORM_MAX_PATH];
-            GetMapItem(menu, item_info[0][VOTEINFO_ITEM_INDEX], map1, PLATFORM_MAX_PATH);
-
-            PushArrayString(mapList, map1);
-
-            // We allow more than two maps for a revote if they are tied
-            for (int i = 1; i < num_items; i++) {
-                if (GetArraySize(mapList) < 2 || item_info[i][VOTEINFO_ITEM_VOTES] == item_info[i - 1][VOTEINFO_ITEM_VOTES]) {
-                    char map[PLATFORM_MAX_PATH];
-                    GetMapItem(menu, item_info[i][VOTEINFO_ITEM_INDEX], map, PLATFORM_MAX_PATH);
-                    PushArrayString(mapList, map);
-                } else {
-                    break;
-                }
-            }
-
-            CPrintToChatAll("%s%t", g_szChatPrefix, "Revote Is Needed", required_percent);
-            SetupWarningTimer(WarningType_Revote, view_as<MapChange>(g_ChangeTime), mapList);
-            return 0;
-        }
-    }
-
-    // No revote needed, continue as normal.
-    Handler_VoteFinishedGeneric(menu, num_votes, num_clients, client_info, num_items, item_info);
-    return 0;
 }
 
 // This is shared by NativeVotes now, but NV doesn't support Display or DisplayItem
