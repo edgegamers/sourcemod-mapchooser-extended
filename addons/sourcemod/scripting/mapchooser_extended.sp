@@ -242,9 +242,9 @@ public void OnPluginStart() {
     // MapChooser Extended cvars
     CreateConVar("mce_version", MCE_VERSION, "MapChooser Extended Version", FCVAR_SPONLY | FCVAR_NOTIFY | FCVAR_DONTRECORD);
 
-    g_Cvar_RunOff        = CreateConVar("mce_runoff", "1", "Hold run off votes if winning choice has less than a certain percentage of votes", _, true, 0.0, true, 1.0);
+    g_Cvar_RunOff = CreateConVar("mce_runoff", "1", "Hold run off votes if winning choice has less than a certain percentage of votes", _, true, 0.0, true, 1.0);
     // g_Cvar_RunOffPercent = CreateConVar("mce_runoffpercent", "50", "If winning choice has less than this percent of votes, hold a runoff", _, true, 0.0, true, 100.0);
-    g_Cvar_BlockSlots    = CreateConVar("mce_blockslots", "1", "Block slots to prevent accidental votes.  Only applies when Voice Command style menus are in use.", _, true, 0.0, true, 1.0);
+    g_Cvar_BlockSlots = CreateConVar("mce_blockslots", "1", "Block slots to prevent accidental votes.  Only applies when Voice Command style menus are in use.", _, true, 0.0, true, 1.0);
     // g_Cvar_BlockSlotsCount = CreateConVar("mce_blockslots_count", "2", "Number of slots to block.", _, true, 1.0, true, 3.0);
     // g_Cvar_MaxRunOffs             = CreateConVar("mce_maxrunoffs", "1", "Number of run off votes allowed each map.", _, true, 0.0);
     g_Cvar_StartTimePercent       = CreateConVar("mce_start_percent", "35.0", "Specifies when to start the vote based on percents.", _, true, 0.0, true, 100.0);
@@ -1347,6 +1347,8 @@ Action Timer_CountVotes(Handle timer) {
         char winner[PLATFORM_MAX_PATH];
         g_NextMapList.GetString(rnd, winner, sizeof(winner));
         MapVoteWin(winner);
+        delete candidates;
+        delete votes;
         return Plugin_Stop;
     }
 
@@ -1373,6 +1375,7 @@ Action Timer_CountVotes(Handle timer) {
     char winner[PLATFORM_MAX_PATH];
     bool found = false;
     while (!found) {
+        votes.Clear();
         for (int client = 1; client <= MaxClients; client++) {
             if (!IsClientInGame(client) || IsFakeClient(client) || GetRankedVotes(client) <= 0)
                 continue;
@@ -1383,7 +1386,7 @@ Action Timer_CountVotes(Handle timer) {
         for (int i = 0; i < candidates.Length; i++) {
             if (votes.Get(i) > totalVotes / 2) {
                 g_VoteList.GetString(candidates.Get(i), winner, sizeof(winner));
-                PrintToConsoleAll("Winner by majority is %s with %d votes", winner, votes.Get(i));
+                PrintToConsoleAll("Winner by majority is %s with %d/%d/%d votes", winner, votes.Get(i), totalVotes / 2, totalVotes);
                 found = true;
                 break;
             }
