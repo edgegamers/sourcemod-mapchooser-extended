@@ -1374,13 +1374,17 @@ Action Timer_CountVotes(Handle timer) {
 
     char winner[PLATFORM_MAX_PATH];
     bool found = false;
-    while (!found) {
-        votes.Clear();
+    int iters  = 0;
+    while (!found && iters++ < 20) {
+        for (int i = 0; i < votes.Length; i++)
+            votes.Set(i, 0);
+        totalVotes = 0;
         for (int client = 1; client <= MaxClients; client++) {
             if (!IsClientInGame(client) || IsFakeClient(client) || GetRankedVotes(client) <= 0)
                 continue;
             int candidateIndex = candidates.FindValue(g_RankedVotes[client][0]);
             votes.Set(candidateIndex, votes.Get(candidateIndex) + 1);
+            totalVotes++;
         }
 
         for (int i = 0; i < candidates.Length; i++) {
@@ -1394,21 +1398,25 @@ Action Timer_CountVotes(Handle timer) {
         if (found)
             break;
 
-        int minVotes     = totalVotes;
-        int minCandidate = -1;
+        int minVotes          = totalVotes;
+        int minCandidate      = -1;
+        int minCandidateIndex = -1;
         for (int i = 0; i < candidates.Length; i++) {
             if (votes.Get(i) < minVotes) {
-                minVotes     = votes.Get(i);
-                minCandidate = i;
+                minVotes          = votes.Get(i);
+                minCandidate      = candidates.Get(i);
+                minCandidateIndex = i;
             }
         }
+
+        if (minCandidate == -1)
+            ThrowError("Error calculating winner, minCandidate is %d with minVotes being %d", minCandidate, minVotes);
 
         char loser[PLATFORM_MAX_PATH];
         g_VoteList.GetString(candidates.Get(minCandidate), loser, sizeof(loser));
         PrintToConsoleAll("Eliminating %s due to only %d votes", loser, minVotes);
-
-        if (minCandidate == -1)
-            ThrowError("Error calculating winner, minCandidate is %d with minVotes being", minCandidate, minVotes);
+        candidates.Erase(minCandidateIndex);
+        votes.Erase(minCandidateIndex);
 
         for (int client = 1; client <= MaxClients; client++) {
             if (!IsClientInGame(client) || IsFakeClient(client))
@@ -1418,7 +1426,8 @@ Action Timer_CountVotes(Handle timer) {
                     for (int k = vote; k < RANKED_VOTES - 1; k++) {
                         g_RankedVotes[client][k] = g_RankedVotes[client][k + 1];
                     }
-                    // break;
+                    g_RankedVotes[client][vote + 1] = -1;
+                    break;
                 }
             }
         }
