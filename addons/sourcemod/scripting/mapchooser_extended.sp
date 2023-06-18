@@ -1413,7 +1413,7 @@ Action Timer_CountVotes(Handle timer) {
             ThrowError("Error calculating winner, minCandidate is %d with minVotes being %d", minCandidate, minVotes);
 
         char loser[PLATFORM_MAX_PATH];
-        g_VoteList.GetString(candidates.Get(minCandidate), loser, sizeof(loser));
+        g_VoteList.GetString(minCandidate, loser, sizeof(loser));
         PrintToConsoleAll("Eliminating %s due to only %d votes", loser, minVotes);
         candidates.Erase(minCandidateIndex);
         votes.Erase(minCandidateIndex);
