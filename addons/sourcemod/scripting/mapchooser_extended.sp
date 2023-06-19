@@ -1182,7 +1182,7 @@ void InitiateVote(MapChange when, Handle inputlist = INVALID_HANDLE) { // TODO: 
     }
 
     ResetRankedVotes();
-
+    g_VoteList.Clear();
     for (int i = 0; i < GetArraySize(inputlist); i++) {
         char map[PLATFORM_MAX_PATH];
         GetArrayString(inputlist, i, map, PLATFORM_MAX_PATH);
@@ -1418,6 +1418,7 @@ Action Timer_CountVotes(Handle timer) {
     }
 
     if (totalVotes == 0) {
+        g_VoteList.Clear();
         int rnd = GetRandomInt(0, g_NextMapList.Length - 1);
         PrintToConsoleAll("Voting has ended with no votes, randomly picking...");
         char winner[PLATFORM_MAX_PATH];
@@ -1516,11 +1517,9 @@ Action Timer_CountVotes(Handle timer) {
         }
     }
 
-    // g_VoteList.GetString(candidates.Get(0), winner, sizeof(winner));
     MapVoteWin(winner);
     delete candidates;
     delete votes;
-    // delete ballots;
     g_VoteList.Clear();
     ResetRankedVotes();
     return Plugin_Stop;
