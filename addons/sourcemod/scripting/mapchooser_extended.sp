@@ -42,6 +42,7 @@
 #include <nextmap>
 #include <sdktools>
 #include <multicolors>
+#include <clientprefs>
 
 #pragma newdecls required
 
@@ -167,6 +168,9 @@ Handle g_MapVoteStartForward        = INVALID_HANDLE;
 Handle g_MapVoteEndForward          = INVALID_HANDLE;
 Handle g_MapVoteRunoffStartForward  = INVALID_HANDLE;
 
+Cookie g_PicksCookie;
+Panel g_PicksPanel;
+
 /* Mapchooser Extended Globals */
 int g_RunoffCount           = 0;
 int g_mapOfficialFileSerial = -1;
@@ -174,6 +178,7 @@ char g_GameModName[64];
 bool g_WarningInProgress = false;
 bool g_AddNoVote         = false;
 char g_szChatPrefix[128];
+int g_PreferredPicks[MAXPLAYERS + 1];
 
 // n map options with m players
 int g_RankedVotes[MAXPLAYERS + 1][RANKED_VOTES]; // { [0 - n, ..., RANKED_VOTES times] } eg: { [0, 1, 2], [3, 2, 3] }
@@ -221,6 +226,8 @@ public void OnPluginStart() {
     g_MapNameUFilter  = CreateArray(arraySize);
     g_MapNameUReplace = CreateArray(arraySize);
 
+    g_PicksCookie = RegClientCookie("mce_votes", "Number of votes to ask for", CookieAccess_Protected);
+
     GetGameFolderName(g_GameModName, sizeof(g_GameModName));
 
     g_Cvar_EndOfMapVote = CreateConVar("mce_endvote", "1", "Specifies if MapChooser should run an end of map vote", _, true, 0.0, true, 1.0);
@@ -259,6 +266,9 @@ public void OnPluginStart() {
     g_Cvar_HideTimer              = CreateConVar("mce_hidetimer", "0", "Hide the MapChooser Extended warning timer", _, true, 0.0, true, 1.0);
     g_Cvar_NoVoteOption           = CreateConVar("mce_addnovote", "1", "Add \"No Vote\" to vote menu?", _, true, 0.0, true, 1.0);
     g_Cvar_ChatPrefix             = CreateConVar("mce_chatprefix", "[MCE] ", "Chat prefix for all MCE related messages");
+
+    RegConsoleCmd("sm_picks", Command_Picks, "Set how many picks you are asked for");
+    RegConsoleCmd("sm_votes", Command_Picks, "Set how many picks you are asked for");
 
     RegAdminCmd("sm_mapvote", Command_Mapvote, ADMFLAG_CHANGEMAP, "sm_mapvote - Forces MapChooser to attempt to run a map vote now.");
     RegAdminCmd("sm_setnextmap", Command_SetNextmap, ADMFLAG_CHANGEMAP, "sm_setnextmap <map>");
@@ -356,6 +366,7 @@ public void OnPluginStart() {
     g_MapVoteRunoffStartForward  = CreateGlobalForward("OnMapVoteRunnoffWarningStart", ET_Ignore);
 
     ResetRankedVotes();
+    BuildPicksPanel();
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
@@ -381,10 +392,27 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
     CreateNative("CanNominate", Native_CanNominate);
     CreateNative("GetMapName", Native_GetMapName);
 
-    if (late)
+    if (late) {
         ResetRankedVotes();
+        for (int i = 1; i <= MaxClients; i++) {
+            if (!IsClientInGame(i) || IsFakeClient(i))
+                continue;
+            OnClientCookiesCached(i);
+        }
+    }
 
     return APLRes_Success;
+}
+
+void BuildPicksPanel() {
+    g_PicksPanel = new Panel();
+    g_PicksPanel.SetTitle("How many picks do you want?");
+    g_PicksPanel.DrawText("1st pick is the FIRST map you'd want\nIf that doesn't win, we'd consider your\n2nd pick, then 3rd, etc.");
+    for (int i = 0; i <= RANKED_VOTES; i++) {
+        char str[4];
+        IntToString(i, str, sizeof(str));
+        g_PicksPanel.DrawItem(str);
+    }
 }
 
 public void OnMapStart() {
@@ -514,6 +542,16 @@ public void OnMapEnd() {
     }
 }
 
+public void OnClientCookiesCached(int client) {
+    int picks = g_PicksCookie.GetInt(client, RANKED_VOTES);
+    if (picks < 0) {
+        picks = 0;
+    } else if (picks > RANKED_VOTES) {
+        picks = RANKED_VOTES;
+    }
+    g_PreferredPicks[client] = picks;
+}
+
 public void OnClientDisconnect(int client) {
     int index = g_NominateOwners.FindValue(client);
 
@@ -531,6 +569,37 @@ public void OnClientDisconnect(int client) {
     g_NominateOwners.Erase(index);
     g_NominateList.Erase(index);
     g_NominateCount--;
+}
+
+public Action Command_Picks(int client, int args) {
+    if (args == 1) {
+        int votes = g_PreferredPicks[client];
+        char voteStr[8];
+        GetCmdArg(1, voteStr, sizeof(voteStr));
+        int chars = StringToIntEx(voteStr, votes);
+        if (chars != strlen(voteStr)) {
+            CReplyToCommand(client, "%sUsage: sm_picks [picks]", g_szChatPrefix);
+            return Plugin_Handled;
+        }
+        if (votes < 0 || votes > RANKED_VOTES) {
+            CReplyToCommand(client, "%sYou can only have between 0 and %i picks.", g_szChatPrefix, RANKED_VOTES);
+            return Plugin_Handled;
+        }
+        g_PreferredPicks[client] = votes;
+        switch (votes) {
+            case 0:
+                CReplyToCommand(client, "%sYou have opted out of voting.", g_szChatPrefix);
+            case 1:
+                CReplyToCommand(client, "%sYou will now be asked your top pick.", g_szChatPrefix, votes);
+            default:
+                CReplyToCommand(client, "%sYou will now be asked your top %i picks.", g_szChatPrefix, votes);
+        }
+        g_PicksCookie.SetInt(client, votes);
+        return Plugin_Handled;
+    }
+
+    g_PicksPanel.Send(client, Handler_PicksPanel, 60);
+    return Plugin_Handled;
 }
 
 public Action Command_SetNextmap(int client, int args) {
@@ -1124,7 +1193,7 @@ void InitiateVote(MapChange when, Handle inputlist = INVALID_HANDLE) { // TODO: 
     g_voteCountTime    = GetTime() + RoundToFloor(voteDuration);
 
     for (int i = 1; i <= MaxClients; i++) {
-        if (!IsClientInGame(i) || IsFakeClient(i)) {
+        if (!IsClientInGame(i) || IsFakeClient(i) || g_PreferredPicks[i] == 0) {
             continue;
         }
         SendVoteMenu(i, when, inputlist);
@@ -1189,6 +1258,13 @@ public void MapVoteWin(const char[] map) {
     }
 }
 
+public int Handler_PicksPanel(Menu menu, MenuAction action, int param1, int param2) {
+    if (action != MenuAction_Select)
+        return 0;
+    FakeClientCommand(param1, "sm_picks %d", param2 - 1);
+    return 0;
+}
+
 // This is shared by NativeVotes now, but NV doesn't support Display or DisplayItem
 public int Handler_MapVoteMenu(Menu menu, MenuAction action, int param1, int param2) {
     switch (action) {
@@ -1199,7 +1275,7 @@ public int Handler_MapVoteMenu(Menu menu, MenuAction action, int param1, int par
 
         case MenuAction_Display: {
             char buffer[255];
-            Format(buffer, sizeof(buffer), "%T", "Vote Nextmap", param1, GetRankedVotes(param1) + 1, RANKED_VOTES);
+            Format(buffer, sizeof(buffer), "%T", "Vote Nextmap", param1, GetRankedVotes(param1) + 1, g_PreferredPicks[param1]);
             Handle panel = view_as<Handle>(param2);
             SetPanelTitle(panel, buffer);
         }
@@ -1218,12 +1294,12 @@ public int Handler_MapVoteMenu(Menu menu, MenuAction action, int param1, int par
                 menu.GetItem(i, item, sizeof(item));
                 mapList.PushString(item);
             }
-            if (vote + 1 >= RANKED_VOTES) {
+            if (vote + 1 >= RANKED_VOTES || vote + 1 >= g_PreferredPicks[param1]) {
                 bool finishVote = true;
                 for (int i = 1; i <= MaxClients; i++) {
-                    if (!IsClientInGame(i) || IsFakeClient(i))
+                    if (!IsClientInGame(i) || IsFakeClient(i) || g_PreferredPicks[i] == 0)
                         continue;
-                    if (GetRankedVotes(i) < RANKED_VOTES) {
+                    if (GetRankedVotes(i) < g_PreferredPicks[i]) {
                         finishVote = false;
                         break;
                     }
@@ -1418,7 +1494,7 @@ Action Timer_CountVotes(Handle timer) {
         candidates.Erase(minCandidateIndex);
         votes.Erase(minCandidateIndex);
 
-        if(candidates.Length == 1) {
+        if (candidates.Length == 1) {
             g_VoteList.GetString(candidates.Get(0), winner, sizeof(winner));
             PrintToConsoleAll("Winner by elimination is %s with %d/%d votes", winner, votes.Get(0), totalVotes);
             found = true;
