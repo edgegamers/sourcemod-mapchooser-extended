@@ -178,7 +178,7 @@ char g_GameModName[64];
 bool g_WarningInProgress = false;
 bool g_AddNoVote         = false;
 char g_szChatPrefix[128];
-int g_PreferredPicks[MAXPLAYERS + 1];
+int g_PreferredPicks[MAXPLAYERS + 1] = { RANKED_VOTES, ... };
 
 // n map options with m players
 int g_RankedVotes[MAXPLAYERS + 1][RANKED_VOTES]; // { [0 - n, ..., RANKED_VOTES times] } eg: { [0, 1, 2], [3, 2, 3] }
