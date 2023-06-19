@@ -367,6 +367,8 @@ public void OnPluginStart() {
 
     ResetRankedVotes();
     BuildPicksPanel();
+
+    AddCommandListener(Listener_Revote, "sm_revote");
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
@@ -402,6 +404,13 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
     }
 
     return APLRes_Success;
+}
+
+Action Listener_Revote(int client, const char[] cmd, int args) {
+    if (GetTime() >= g_voteCountTime || g_voteCountTime == 0)
+        return Plugin_Continue;
+    SendVoteMenu(client, MapChange_RoundEnd, g_VoteList);
+    return Plugin_Handled;
 }
 
 void BuildPicksPanel() {
@@ -1310,7 +1319,7 @@ public int Handler_MapVoteMenu(Menu menu, MenuAction action, int param1, int par
                 }
                 return 0;
             }
-            SendVoteMenu(param1, MapChange_MapEnd, mapList);
+            SendVoteMenu(param1, MapChange_RoundEnd, mapList);
         }
 
         case MenuAction_DisplayItem: {
@@ -1409,6 +1418,8 @@ public Action Timer_ChangeMap(Handle hTimer, Handle dp) {
 Action Timer_CountVotes(Handle timer) {
     ArrayList candidates = new ArrayList();
     ArrayList votes      = new ArrayList();
+
+    g_voteCountTime = 0;
 
     int totalVotes = 0;
     for (int client = 1; client <= MaxClients; client++) {
@@ -1516,12 +1527,24 @@ Action Timer_CountVotes(Handle timer) {
             }
         }
     }
+    if (!found) {
+        PrintToConsoleAll("Error calculating winner, no winner found in %d iterations", iters);
+        PrintToConsoleAll("Candidates:");
+        for (int i = 0; i < candidates.Length; i++) {
+            char buffer[PLATFORM_MAX_PATH];
+            g_VoteList.GetString(candidates.Get(i), buffer, sizeof(buffer));
+            PrintToConsoleAll("Candidate %d: %s", i, buffer);
+        }
+        delete candidates;
+        delete votes;
+        return Plugin_Stop;
+    }
 
-    MapVoteWin(winner);
     delete candidates;
     delete votes;
     g_VoteList.Clear();
     ResetRankedVotes();
+    MapVoteWin(winner);
     return Plugin_Stop;
 }
 
