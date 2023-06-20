@@ -178,7 +178,7 @@ char g_GameModName[64];
 bool g_WarningInProgress = false;
 bool g_AddNoVote         = false;
 char g_szChatPrefix[128];
-int g_PreferredPicks[MAXPLAYERS + 1] = { RANKED_VOTES, ... };
+int g_PreferredPicks[MAXPLAYERS + 1] = { 1, ... };
 
 // n map options with m players
 int g_RankedVotes[MAXPLAYERS + 1][RANKED_VOTES]; // { [0 - n, ..., RANKED_VOTES times] } eg: { [0, 1, 2], [3, 2, 3] }
@@ -553,7 +553,7 @@ public void OnMapEnd() {
 }
 
 public void OnClientCookiesCached(int client) {
-    int picks = g_PicksCookie.GetInt(client, RANKED_VOTES);
+    int picks = g_PicksCookie.GetInt(client, 1);
     if (picks < 0) {
         picks = 0;
     } else if (picks > RANKED_VOTES) {
