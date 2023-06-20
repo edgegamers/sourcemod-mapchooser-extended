@@ -1538,6 +1538,7 @@ Action Timer_CountVotes(Handle timer) {
         }
         delete candidates;
         delete votes;
+        g_VoteList.Clear();
         return Plugin_Stop;
     }
 
