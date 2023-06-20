@@ -409,6 +409,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 Action Listener_Revote(int client, const char[] cmd, int args) {
     if (GetTime() >= g_voteCountTime || g_voteCountTime == 0)
         return Plugin_Continue;
+    ResetRankedVotes(client);
     SendVoteMenu(client, MapChange_RoundEnd, g_VoteList);
     return Plugin_Handled;
 }
